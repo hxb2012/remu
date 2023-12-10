@@ -1,0 +1,87 @@
+:PROPERTIES:
+:ID:       remu
+:END:
+#+TITLE: 莱姆
+#+PROPERTY: header-args:emacs-lisp :lexical yes :results silent
+
+* 安装
+
+可以从[[https://github.com/hxb2012/melpa/][我的美尔巴]]安装 ~remu~
+
+* 功能
+
+~M-x remu~ 打开侧栏，类似 ~org-roam-buffer-toggle~
+
+* 演示
+
+** 链接目标
+
+*** fuzzy headline only
+
+fuzzy headline only not found, <<fuzzy target>>, fuzzy text and <<<Radio Target>>>
+
+#+NAME: fuzzy name
+| a | b | c |
+
+*** id headline
+:PROPERTIES:
+:ID:       3d35cd9e-f443-49d2-b2f3-c0aca2174d5e
+:END:
+
+*** custom-id headline
+:PROPERTIES:
+:CUSTOM_ID: custom-id
+:END:
+
+#+BEGIN_SRC emacs-lisp
+(message "Hello, world!") (ref:coderef)
+#+END_SRC
+
+*** example.com (1)
+:PROPERTIES:
+:REMU_REFS: https://example.com/
+:END:
+
+*** example.com (2)
+:PROPERTIES:
+:REMU_REFS: https://example.com/
+:END:
+
+** 链接
+
+[[*fuzzy headline only]], [[fuzzy target]], [[fuzzy text]], [[fuzzy name]], [[#custom-id]], Radio Target, [[(coderef)]]
+
+[[*fuzzy headline only not found]], [[fuzzy not found]], [[#custom-id-not-found]], [[(coderef-not-found)]]
+
+[[file:::1]], [[file:::*fuzzy headline only]], [[file:::fuzzy target]], [[file:::fuzzy text]], [[file:::#custom-id]], [[file:::/fuzzy/]]
+
+id:remu
+
+显示所有 ~REMU_REFS~ 为 https://example.com/ 的标题，类似ROAM_REFS
+
+*** TODO task 1 :tag:
+SCHEDULED: <2024-01-01 一>
+
+[[*fuzzy headline only]]
+
+*** DONE task 2
+CLOSED: <2023-01-01 日>
+
+[[fuzzy headline]]
+
+*** TODO task 3
+
+[[id:3d35cd9e-f443-49d2-b2f3-c0aca2174d5e]]
+
+*** TODO task 4
+
+[[#custom-id]]
+
+*** TODO task 5
+
+https://example.com/
+
+*** TODO task 6
+DEADLINE: <2024-01-01 一>
+
+[[file:::/fuzzy/]]

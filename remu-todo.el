@@ -44,7 +44,7 @@
                   (save-excursion
                     (org-next-visible-heading 1)
                     (point))
-                (remu-link--collect-links table t (point-min))))))
+                (remu-link--collect-links table t (list (point-min)))))))
         (push matches all-matches)
         (push regexps all-regexps)))
     (maphash
@@ -165,40 +165,49 @@
     (_
      (cons nil "           "))))
 
-(defun remu-todo--insert-item (buffer)
-  (let* ((start (point))
-         (todo-state (save-match-data (org-get-todo-state)))
-         (donep (member todo-state org-done-keywords))
-         (habitp (and (fboundp 'org-is-habit-p) (org-is-habit-p)))
-         (category (org-get-category))
-         (inherited-tags
-          (or (eq org-agenda-show-inherited-tags 'always)
-              (and (listp org-agenda-show-inherited-tags)
-                   (memq 'agenda org-agenda-show-inherited-tags))
-              (and (eq org-agenda-show-inherited-tags t)
-                   (or (eq org-agenda-use-tag-inheritance t)
-                       (memq 'agenda
-                             org-agenda-use-tag-inheritance)))))
-         (tags (org-get-tags nil (not inherited-tags)))
-         (level (make-string (org-reduced-level (org-outline-level)) ?\s))
-         (head
-          (progn
-            (re-search-forward org-outline-regexp-bol)
-            (buffer-substring (point) (line-end-position))))
-         (face-extra (remu-todo--get-item-extra))
-         (extra (cdr face-extra))
-         (face (if donep 'org-agenda-done (car face-extra)))
-         (item (org-agenda-format-item extra head level category tags nil nil habitp))
-         (txt (if face (propertize item 'face face) item)))
-    (with-current-buffer buffer
-      (insert (propertize txt 'remu-section t 'remu-pos start))
-      (insert "\n"))))
+(defun remu-todo--insert-item (buffer last-pos start)
+  (let* ((last-file-overlay (when last-pos (car last-pos)))
+         (last-file-name
+          (when last-file-overlay
+            (overlay-get last-file-overlay 'remu-file)))
+         (file-changed (not (equal last-file-name buffer-file-name)))
+         (file-overlay
+          (if file-changed
+              (remu-link--insert-file buffer)
+            last-file-overlay))
+         (last-org-pos (unless file-changed (cadr last-pos))))
+    (unless (eq last-org-pos start)
+      (let* ((todo-state (save-match-data (org-get-todo-state)))
+             (donep (member todo-state org-done-keywords))
+             (habitp (and (fboundp 'org-is-habit-p) (org-is-habit-p)))
+             (category (org-get-category))
+             (inherited-tags
+              (or (eq org-agenda-show-inherited-tags 'always)
+                  (and (listp org-agenda-show-inherited-tags)
+                       (memq 'agenda org-agenda-show-inherited-tags))
+                  (and (eq org-agenda-show-inherited-tags t)
+                       (or (eq org-agenda-use-tag-inheritance t)
+                           (memq 'agenda
+                                 org-agenda-use-tag-inheritance)))))
+             (tags (org-get-tags nil (not inherited-tags)))
+             (level (make-string (org-reduced-level (org-outline-level)) ?\s))
+             (head
+              (progn
+                (re-search-forward org-outline-regexp-bol)
+                (buffer-substring (point) (line-end-position))))
+             (face-extra (remu-todo--get-item-extra))
+             (extra (cdr face-extra))
+             (face (if donep 'org-agenda-done (car face-extra)))
+             (item (org-agenda-format-item extra head level category tags nil nil habitp))
+             (txt (if face (propertize item 'face face) item)))
+        (with-current-buffer buffer
+          (remu-section--with-restriction file-overlay
+            (remu-link--insert-section start txt)))))
+    (list file-overlay start)))
 
-(defun remu-todo--display-links (buffer links headline)
+(defun remu-todo--display-links (buffer links)
   (org-compile-prefix-format 'agenda)
-  (dolist (pos (seq-sort '< (remu-link--get-matches links headline t)))
-    (goto-char pos)
-    (remu-todo--insert-item buffer)))
+  (remu-link--display-links buffer links 'remu-todo--insert-item))
 
 ;;;###autoload
 (defun remu-todo-section (overlay)

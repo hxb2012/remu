@@ -64,6 +64,8 @@ SCHEDULED: <2024-01-01 一>
 
 [[*fuzzy headline only]]
 
+[[*fuzzy headline only]]
+
 *** DONE task 2
 CLOSED: <2023-01-01 日>
 

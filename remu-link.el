@@ -203,7 +203,7 @@
          (when (org-up-heading-safe)
            (remu-link--get-heading file-overlay last-org-pos last-output-pos))))))))
 
-(defun remu-link--highlight-match (buffer start end &optional last-pos)
+(defun remu-link--highlight-match (buffer last-pos start end)
   (let* ((last-file-overlay (when last-pos (car last-pos)))
          (last-file-name
           (when last-file-overlay
@@ -271,15 +271,15 @@
    (cond
     ((equal type "radio")
      (when (remu-link--search-radio-target path)
-       (remu-link--highlight-match output-buffer (match-beginning 0) (match-end 0))))
+       (remu-link--highlight-match output-buffer nil (match-beginning 0) (match-end 0))))
     ((eq type 'line)
      (goto-char (point-min))
      (forward-line (1- path))
-     (remu-link--highlight-match output-buffer (point) (line-end-position)))
+     (remu-link--highlight-match output-buffer nil (point) (line-end-position)))
     ((eq type 'id)
      (org-find-property "ID" path)
      (goto-char (match-beginning 0))
-     (remu-link--highlight-match output-buffer (point) (match-end 0)))
+     (remu-link--highlight-match output-buffer nil (point) (match-end 0)))
     ((eq type 'refs)
      (let ((regexp (org-re-property remu-link-property-refs nil nil path))
            (last-pos nil))
@@ -290,7 +290,7 @@
            (setq last-pos
                  (save-excursion
                    (remu-link--highlight-match
-                    output-buffer (match-beginning 0) (match-end 0) last-pos)))))))
+                    output-buffer last-pos (match-beginning 0) (match-end 0))))))))
     ((string-match "\\`/\\(.*\\)/\\'" path)
      (let* ((regexp (match-string 1 path))
             (remu-case-fold-search
@@ -305,16 +305,16 @@
          (setq last-pos
                (save-excursion
                  (remu-link--highlight-match
-                  output-buffer (match-beginning 0) (match-end 0) last-pos))))))
+                  output-buffer last-pos (match-beginning 0) (match-end 0)))))))
     ((string-match-p "\\`(\\(.*\\))\\'" path)
      (when (remu-link--search path (when same-buffer (+ 2 (car range))))
        (let ((start (match-beginning 2))
              (end (match-end 2)))
          (goto-char end)
-         (remu-link--highlight-match output-buffer start end))))
+         (remu-link--highlight-match output-buffer nil start end))))
     ((remu-link--search path (when same-buffer (+ 2 (car range))))
      (goto-char (match-beginning 0))
-     (remu-link--highlight-match output-buffer (point) (match-end 0))))))
+     (remu-link--highlight-match output-buffer nil (point) (match-end 0))))))
 
 (defun remu-link--init-temp-buffer (file)
   (insert-file-contents file)
@@ -388,7 +388,7 @@
     (while (re-search-forward org-link-any-re nil t)
       (save-excursion
         (goto-char (match-beginning 0))
-        (let* ((range (cons (point) (match-end 0)))
+        (let* ((range (list (point) (match-end 0)))
                (value (or data range)))
           (pcase (org-with-wide-buffer
                   (remu-link--resolve-local-link
@@ -406,8 +406,7 @@
           (let* ((start (prop-match-beginning match))
                  (end (prop-match-end match))
                  (path (buffer-substring-no-properties start end))
-                 (range (cons start end))
-                 (data (or data range))
+                 (data (or data (list start end)))
                  (face (get-text-property start 'face)))
             (when (and
                    (or (eq 'org-link face)
@@ -433,11 +432,11 @@
      (pcase-let ((`(,matches . ,regexps) (remu-link--collect-links table skip-radio)))
        (list matches regexps table)))))
 
-(defun remu-link--get-matches (links headline &optional dedup)
+(defun remu-link--get-matches (links headline)
   (pcase-let*
       ((`(,matches ,regexps ,table) links)
        (pos (point))
-       (nonre-matches
+       (all-matches
         (append
          (mapcar
           'cdr
@@ -458,16 +457,13 @@
             (when-let ((id (org-entry-get pos "CUSTOM_ID")))
               (gethash (cons 'custom-id id) table))
             (when-let ((id (org-entry-get pos remu-link-property-refs)))
-              (gethash (cons 'refs id) table))))))
-       (all-matches (if dedup (seq-uniq nonre-matches) nonre-matches)))
+              (gethash (cons 'refs id) table)))))))
     (pcase-dolist (`(,value . ,re) regexps)
       (let ((case-fold-search
              (if (eq org-occur-case-fold-search 'smart)
                  (isearch-no-upper-case-p re t)
                org-occur-case-fold-search)))
         (when (cond
-               ((and dedup (member value all-matches))
-                nil)
                ((numberp headline)
                 (with-restriction pos headline
                   (goto-char pos)
@@ -476,13 +472,14 @@
           (push value all-matches))))
     all-matches))
 
-(defun remu-link--display-links (buffer links &optional headline)
+(defun remu-link--display-links (buffer links &optional highlight)
   (let ((last-pos nil))
-    (pcase-dolist
-        (`(,start . ,end)
-         (seq-sort-by 'car '< (remu-link--get-matches links headline)))
-      (goto-char start)
-      (setq last-pos (remu-link--highlight-match buffer start end last-pos)))))
+    (dolist (entry (seq-sort-by 'car '< links))
+      (goto-char (car entry))
+      (setq last-pos
+            (apply
+             (or highlight 'remu-link--highlight-match)
+             buffer last-pos entry)))))
 
 (defun remu-link--insert-outline-path (output-buffer)
   (unless (org-before-first-heading-p)
@@ -525,9 +522,11 @@
          (when headline
            (remu-link--insert-outline-path output-buffer))
          (funcall (or display 'remu-link--display-links)
-          output-buffer links
-          (when headline
-            (if (org-at-heading-p) (line-end-position) t))))))))
+          output-buffer
+           (remu-link--get-matches
+            links
+            (when headline
+              (if (org-at-heading-p) (line-end-position) t)))))))))
 
 ;;;###autoload
 (defun remu-link-back-headline-section (overlay)

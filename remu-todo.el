@@ -32,22 +32,21 @@
         (regexp (concat "^" org-outline-regexp " *" org-todo-regexp))
         (all-matches nil)
         (all-regexps nil))
-    (org-with-wide-buffer
-     (goto-char (point-min))
-     (while (let (case-fold-search)
-              (re-search-forward regexp nil t))
-       (pcase-let
-           ((`(,matches . ,regexps)
-             (save-excursion
-               (goto-char (match-beginning 0))
-               (with-restriction
-                   (point)
-                   (save-excursion
-                     (org-next-visible-heading 1)
-                     (point))
-                 (remu-link--collect-links table t (point-min))))))
-         (push matches all-matches)
-         (push regexps all-regexps))))
+    (goto-char (point-min))
+    (while (let (case-fold-search)
+             (re-search-forward regexp nil t))
+      (pcase-let
+          ((`(,matches . ,regexps)
+            (save-excursion
+              (goto-char (match-beginning 0))
+              (with-restriction
+                  (point)
+                  (save-excursion
+                    (org-next-visible-heading 1)
+                    (point))
+                (remu-link--collect-links table t (point-min))))))
+        (push matches all-matches)
+        (push regexps all-regexps)))
     (maphash
      (lambda (key value)
        (puthash key (seq-uniq value) table1))
@@ -195,41 +194,15 @@
       (insert (propertize txt 'remu-section t 'remu-pos start))
       (insert "\n"))))
 
-(defun remu-todo--display-links (buffer links)
-  (let ((headline (if (org-at-heading-p) (line-end-position) t)))
-    (org-compile-prefix-format 'agenda)
-    (dolist (pos (seq-sort '< (remu-link--get-matches links headline t)))
-      (goto-char pos)
-      (remu-todo--insert-item buffer))))
+(defun remu-todo--display-links (buffer links headline)
+  (org-compile-prefix-format 'agenda)
+  (dolist (pos (seq-sort '< (remu-link--get-matches links headline t)))
+    (goto-char pos)
+    (remu-todo--insert-item buffer)))
 
 ;;;###autoload
 (defun remu-todo-section (overlay)
-  (let* ((output-buffer (current-buffer))
-         (tick (buffer-chars-modified-tick remu--current-buffer))
-         (modified (not (eq tick (overlay-get overlay 'remu-last-tick))))
-         (links
-          (if modified
-              (with-current-buffer remu--current-buffer
-                (remu-todo--collect))
-            (overlay-get overlay 'remu-links)))
-         (pos
-          (with-current-buffer remu--current-buffer
-            (org-with-wide-buffer
-             (org-back-to-heading-or-point-min)
-             (point))))
-         (old-pos (overlay-get overlay 'remu-last-pos))
-         (moved (not (eq pos old-pos))))
-    (when modified
-      (overlay-put overlay 'remu-last-tick tick)
-      (overlay-put overlay 'remu-links links))
-    (when moved
-      (overlay-put overlay 'remu-last-pos pos))
-    (when (or modified moved)
-      (delete-region (point-min) (point-max))
-      (with-current-buffer remu--current-buffer
-        (org-with-wide-buffer
-         (goto-char pos)
-         (remu-todo--display-links output-buffer links))))))
+  (remu-link-back-section overlay t 'remu-todo--collect 'remu-todo--display-links))
 
 (provide 'remu-link)
 ;;; remu-link.el ends here

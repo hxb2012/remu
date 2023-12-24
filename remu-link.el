@@ -489,19 +489,23 @@
         (insert "\n")))))
 
 ;;;###autoload
-(defun remu-link-back-headline-section (overlay)
+(defun remu-link-back-section (overlay &optional headline collect display)
   (let* ((output-buffer (current-buffer))
          (tick (buffer-chars-modified-tick remu--current-buffer))
          (modified (not (eq tick (overlay-get overlay 'remu-last-tick))))
          (links
           (if modified
               (with-current-buffer remu--current-buffer
-                (remu-link--collect t))
+                (org-with-wide-buffer
+                 (if collect
+                     (funcall collect)
+                   (remu-link--collect headline))))
             (overlay-get overlay 'remu-links)))
          (pos
           (with-current-buffer remu--current-buffer
             (org-with-wide-buffer
-             (org-back-to-heading-or-point-min)
+             (when headline
+               (org-back-to-heading-or-point-min))
              (point))))
          (old-pos (overlay-get overlay 'remu-last-pos))
          (moved (not (eq pos old-pos))))
@@ -515,36 +519,16 @@
       (with-current-buffer remu--current-buffer
         (org-with-wide-buffer
          (goto-char pos)
-         (remu-link--insert-outline-path output-buffer)
-         (remu-link--display-links
+         (when headline
+           (remu-link--insert-outline-path output-buffer))
+         (funcall (or display 'remu-link--display-links)
           output-buffer links
-          (if (org-at-heading-p) (line-end-position) t)))))))
+          (when headline
+            (if (org-at-heading-p) (line-end-position) t))))))))
 
 ;;;###autoload
-(defun remu-link-back-section (overlay)
-  (let* ((output-buffer (current-buffer))
-         (tick (buffer-chars-modified-tick remu--current-buffer))
-         (modified (not (eq tick (overlay-get overlay 'remu-last-tick))))
-         (links
-          (if modified
-              (with-current-buffer remu--current-buffer
-                (remu-link--collect))
-            (overlay-get overlay 'remu-links)))
-         (pos
-          (with-current-buffer remu--current-buffer
-            (point)))
-         (old-pos (overlay-get overlay 'remu-last-pos))
-         (moved (not (eq pos old-pos))))
-    (when modified
-      (overlay-put overlay 'remu-last-tick tick)
-      (overlay-put overlay 'remu-links links))
-    (when moved
-      (overlay-put overlay 'remu-last-pos pos))
-    (when (or modified moved)
-      (delete-region (point-min) (point-max))
-      (with-current-buffer remu--current-buffer
-        (org-with-wide-buffer
-         (remu-link--display-links output-buffer links))))))
+(defun remu-link-back-headline-section (overlay)
+  (remu-link-back-section overlay t))
 
 (provide 'remu-link)
 ;;; remu-link.el ends here

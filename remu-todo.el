@@ -189,11 +189,10 @@
          (face-extra (remu-todo--get-item-extra))
          (extra (cdr face-extra))
          (face (if donep 'org-agenda-done (car face-extra)))
-         (item (org-agenda-format-item
-extra head level category tags nil nil habitp))
+         (item (org-agenda-format-item extra head level category tags nil nil habitp))
          (txt (if face (propertize item 'face face) item)))
     (with-current-buffer buffer
-      (insert (propertize txt 'remu-section t 'remu start))
+      (insert (propertize txt 'remu-section t 'remu-pos start))
       (insert "\n"))))
 
 (defun remu-todo--display-links (buffer links)
@@ -207,7 +206,7 @@ extra head level category tags nil nil habitp))
 (defun remu-todo-section (overlay)
   (let* ((output-buffer (current-buffer))
          (tick (buffer-chars-modified-tick remu--current-buffer))
-         (modified (not (eq tick (overlay-get overlay 'remu-tick))))
+         (modified (not (eq tick (overlay-get overlay 'remu-last-tick))))
          (links
           (if modified
               (with-current-buffer remu--current-buffer
@@ -218,13 +217,13 @@ extra head level category tags nil nil habitp))
             (org-with-wide-buffer
              (org-back-to-heading-or-point-min)
              (point))))
-         (old-pos (overlay-get overlay 'remu-pos))
+         (old-pos (overlay-get overlay 'remu-last-pos))
          (moved (not (eq pos old-pos))))
     (when modified
-      (overlay-put overlay 'remu-tick tick)
+      (overlay-put overlay 'remu-last-tick tick)
       (overlay-put overlay 'remu-links links))
     (when moved
-      (overlay-put overlay 'remu-pos pos))
+      (overlay-put overlay 'remu-last-pos pos))
     (when (or modified moved)
       (delete-region (point-min) (point-max))
       (with-current-buffer remu--current-buffer

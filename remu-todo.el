@@ -204,5 +204,5 @@
 (defun remu-todo-section (overlay)
   (remu-link-back-section overlay t 'remu-todo--collect 'remu-todo--display-links))
 
-(provide 'remu-link)
-;;; remu-link.el ends here
+(provide 'remu-todo)
+;;; remu-todo.el ends here

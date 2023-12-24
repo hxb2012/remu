@@ -295,8 +295,8 @@
      (let* ((regexp (match-string 1 path))
             (remu-case-fold-search
              (if (eq org-occur-case-fold-search 'smart)
-		 (isearch-no-upper-case-p regexp t)
-	       org-occur-case-fold-search))
+                 (isearch-no-upper-case-p regexp t)
+               org-occur-case-fold-search))
             (last-pos nil))
        (goto-char (point-min))
        (while
@@ -460,8 +460,8 @@
     (pcase-dolist (`(,value . ,re) regexps)
       (let ((case-fold-search
              (if (eq org-occur-case-fold-search 'smart)
-	         (isearch-no-upper-case-p re t)
-	       org-occur-case-fold-search)))
+                 (isearch-no-upper-case-p re t)
+               org-occur-case-fold-search)))
         (when (cond
                ((and dedup (member value all-matches))
                 nil)

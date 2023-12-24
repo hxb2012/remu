@@ -80,51 +80,51 @@
             (current today)
             (s (match-string 0))
             (pos (point))
-	    (todo-state (save-match-data (org-get-todo-state)))
+            (todo-state (save-match-data (org-get-todo-state)))
             (sexp? (string-prefix-p "%%" s))
-	    ;; DEADLINE is the deadline date for the entry.  It is
-	    ;; either the base date or the last repeat, according
-	    ;; to `org-agenda-prefer-last-repeat'.
-	    (deadline
-	     (cond
-	      (sexp? (org-agenda--timestamp-to-absolute s current))
-	      ((or (eq org-agenda-prefer-last-repeat t)
-		   (member todo-state org-agenda-prefer-last-repeat))
-	       (org-agenda--timestamp-to-absolute
-		s today 'past (current-buffer) pos))
-	      (t (org-agenda--timestamp-to-absolute s))))
-	    (diff (- deadline current))
-	    (suppress-prewarning
-	     (let ((scheduled
-		    (and org-agenda-skip-deadline-prewarning-if-scheduled
-			 (org-entry-get nil "SCHEDULED"))))
-	       (cond
-		((not scheduled) nil)
-		;; The current item has a scheduled date, so
-		;; evaluate its prewarning lead time.
-		((integerp org-agenda-skip-deadline-prewarning-if-scheduled)
-		 ;; Use global prewarning-restart lead time.
-		 org-agenda-skip-deadline-prewarning-if-scheduled)
-		((eq org-agenda-skip-deadline-prewarning-if-scheduled
-		     'pre-scheduled)
-		 ;; Set pre-warning to no earlier than SCHEDULED.
-		 (min (- deadline
-			 (org-agenda--timestamp-to-absolute scheduled))
-		      org-deadline-warning-days))
-		;; Set pre-warning to deadline.
-		(t 0))))
+            ;; DEADLINE is the deadline date for the entry.  It is
+            ;; either the base date or the last repeat, according
+            ;; to `org-agenda-prefer-last-repeat'.
+            (deadline
+             (cond
+              (sexp? (org-agenda--timestamp-to-absolute s current))
+              ((or (eq org-agenda-prefer-last-repeat t)
+                   (member todo-state org-agenda-prefer-last-repeat))
+               (org-agenda--timestamp-to-absolute
+                s today 'past (current-buffer) pos))
+              (t (org-agenda--timestamp-to-absolute s))))
+            (diff (- deadline current))
+            (suppress-prewarning
+             (let ((scheduled
+                    (and org-agenda-skip-deadline-prewarning-if-scheduled
+                         (org-entry-get nil "SCHEDULED"))))
+               (cond
+                ((not scheduled) nil)
+                ;; The current item has a scheduled date, so
+                ;; evaluate its prewarning lead time.
+                ((integerp org-agenda-skip-deadline-prewarning-if-scheduled)
+                 ;; Use global prewarning-restart lead time.
+                 org-agenda-skip-deadline-prewarning-if-scheduled)
+                ((eq org-agenda-skip-deadline-prewarning-if-scheduled
+                     'pre-scheduled)
+                 ;; Set pre-warning to no earlier than SCHEDULED.
+                 (min (- deadline
+                         (org-agenda--timestamp-to-absolute scheduled))
+                      org-deadline-warning-days))
+                ;; Set pre-warning to deadline.
+                (t 0))))
             (wdays (or suppress-prewarning (org-get-wdays s)))
             (extra
-	     ;; Insert appropriate suffixes before deadlines.
-	     ;; Those only apply to today agenda.
-	     (pcase-let ((`(,now ,future ,past)
-			  org-agenda-deadline-leaders))
-	       (cond
-		((and today? (< deadline today)) (format past (- diff)))
-		((and today? (> deadline today)) (format future diff))
-		(t now))))
+             ;; Insert appropriate suffixes before deadlines.
+             ;; Those only apply to today agenda.
+             (pcase-let ((`(,now ,future ,past)
+                          org-agenda-deadline-leaders))
+               (cond
+                ((and today? (< deadline today)) (format past (- diff)))
+                ((and today? (> deadline today)) (format future diff))
+                (t now))))
             (face (org-agenda-deadline-face
-		   (- 1 (/ (float diff) (max wdays 1))))))
+                   (- 1 (/ (float diff) (max wdays 1))))))
        (cons face extra)))
     ('scheduled
      (let* ((today (org-today))
@@ -132,35 +132,35 @@
             (current today)
             (s (match-string 0))
             (pos (point))
-	    (todo-state (save-match-data (org-get-todo-state)))
-	    (sexp? (string-prefix-p "%%" s))
-	    ;; SCHEDULE is the scheduled date for the entry.  It is
-	    ;; either the bare date or the last repeat, according
-	    ;; to `org-agenda-prefer-last-repeat'.
-	    (schedule
-	     (cond
-	      (sexp? (org-agenda--timestamp-to-absolute s current))
-	      ((or (eq org-agenda-prefer-last-repeat t)
-		   (member todo-state org-agenda-prefer-last-repeat))
-	       (org-agenda--timestamp-to-absolute
-		s today 'past (current-buffer) pos))
-	      (t (org-agenda--timestamp-to-absolute s))))
-	    (diff (- current schedule))
-	    (pastschedp (< schedule today))
-	    (futureschedp (> schedule today))
+            (todo-state (save-match-data (org-get-todo-state)))
+            (sexp? (string-prefix-p "%%" s))
+            ;; SCHEDULE is the scheduled date for the entry.  It is
+            ;; either the bare date or the last repeat, according
+            ;; to `org-agenda-prefer-last-repeat'.
+            (schedule
+             (cond
+              (sexp? (org-agenda--timestamp-to-absolute s current))
+              ((or (eq org-agenda-prefer-last-repeat t)
+                   (member todo-state org-agenda-prefer-last-repeat))
+               (org-agenda--timestamp-to-absolute
+                s today 'past (current-buffer) pos))
+              (t (org-agenda--timestamp-to-absolute s))))
+            (diff (- current schedule))
+            (pastschedp (< schedule today))
+            (futureschedp (> schedule today))
             (habitp (and (fboundp 'org-is-habit-p) (org-is-habit-p)))
             (extra
              (pcase-let ((`(,first ,past) org-agenda-scheduled-leaders))
-	       ;; Show a reminder of a past scheduled today.
-	       (if (and todayp pastschedp)
-		   (format past diff)
-		 first)))
+               ;; Show a reminder of a past scheduled today.
+               (if (and todayp pastschedp)
+                   (format past diff)
+                 first)))
             (face (cond ((and (not habitp) pastschedp)
-			 'org-scheduled-previously)
-			((and habitp futureschedp)
-			 'org-agenda-done)
-			(todayp 'org-scheduled-today)
-			(t 'org-scheduled))))
+                         'org-scheduled-previously)
+                        ((and habitp futureschedp)
+                         'org-agenda-done)
+                        (todayp 'org-scheduled-today)
+                        (t 'org-scheduled))))
      (cons face extra)))
     (_
      (cons nil "           "))))
@@ -172,13 +172,13 @@
          (habitp (and (fboundp 'org-is-habit-p) (org-is-habit-p)))
          (category (org-get-category))
          (inherited-tags
-	  (or (eq org-agenda-show-inherited-tags 'always)
-	      (and (listp org-agenda-show-inherited-tags)
-		   (memq 'agenda org-agenda-show-inherited-tags))
-	      (and (eq org-agenda-show-inherited-tags t)
-		   (or (eq org-agenda-use-tag-inheritance t)
-		       (memq 'agenda
-			     org-agenda-use-tag-inheritance)))))
+          (or (eq org-agenda-show-inherited-tags 'always)
+              (and (listp org-agenda-show-inherited-tags)
+                   (memq 'agenda org-agenda-show-inherited-tags))
+              (and (eq org-agenda-show-inherited-tags t)
+                   (or (eq org-agenda-use-tag-inheritance t)
+                       (memq 'agenda
+                             org-agenda-use-tag-inheritance)))))
          (tags (org-get-tags nil (not inherited-tags)))
          (level (make-string (org-reduced-level (org-outline-level)) ?\s))
          (head

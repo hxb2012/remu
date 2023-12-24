@@ -316,6 +316,11 @@
      (goto-char (match-beginning 0))
      (remu-link--highlight-match output-buffer (point) (match-end 0))))))
 
+(defun remu-link--init-temp-buffer (file)
+  (insert-file-contents file)
+  (org-mode)
+  (font-lock-ensure))
+
 ;;;###autoload
 (defun remu-link-target-section (overlay)
   (pcase (remu-link--parse-link)
@@ -347,9 +352,7 @@
            (with-temp-buffer
              (let ((buffer-file-name file)
                    (default-directory (file-name-directory file)))
-               (insert-file-contents file)
-               (org-mode)
-               (font-lock-ensure)
+               (remu-link--init-temp-buffer file)
                (remu-link--display-target output-buffer range type path))))
           (t
            (insert (format "%s" link)))))))
